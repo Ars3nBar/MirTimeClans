@@ -380,7 +380,7 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, Listene
     public void onClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
         String title = e.getView().getTitle();
-        String mainPrefix = color(getConfig().getString("gui.main-title", "").split("%tag%"));
+        String mainPrefix = color(getConfig().getString("gui.main-title", "").split("%tag%")[0]);
         String colTitle = color(getConfig().getString("gui.colors-title", ""));
         String effTitle = color(getConfig().getString("gui.effects-title", ""));
 
