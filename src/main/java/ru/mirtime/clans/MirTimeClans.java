@@ -9,9 +9,12 @@
  */
 package ru.mirtime.clans;
 
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -22,7 +25,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -40,8 +48,9 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, Listene
 
     private File dbFile;
     public YamlConfiguration db;
-    private ClanGUI gui;
     private final Map<UUID, String> invites = new HashMap<>();
+    private final Map<Integer, String> slotToColor = new HashMap<>();
+    private final Map<Integer, String> slotToEffect = new HashMap<>();
     private static final NumberFormat FORMAT = NumberFormat.getInstance(Locale.US);
 
     @Override
@@ -52,11 +61,9 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, Listene
             try { dbFile.createNewFile(); } catch (IOException ignored) {}
         }
         db = YamlConfiguration.loadConfiguration(dbFile);
-        gui = new ClanGUI(this);
 
         if (getCommand("clan") != null) getCommand("clan").setExecutor(this);
         Bukkit.getPluginManager().registerEvents(this, this);
-        Bukkit.getPluginManager().registerEvents(gui, this);
 
         new BukkitRunnable() {
             @Override
@@ -138,7 +145,7 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, Listene
 
         if (args.length == 0) {
             if (clanId != null) {
-                gui.openMain(p, clanId);
+                openMain(p, clanId);
             } else {
                 p.sendMessage(color("&#0055ff&l&m                                                "));
                 p.sendMessage(color(" &#0055ff&l⚡ &#00E5FF&lСИСТЕМА КЛАНОВ &8— &fВы не состоите в клане"));
@@ -173,7 +180,8 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, Listene
             saveDb();
 
             Bukkit.broadcastMessage(getMsg("created").replace("%player%", p.getName()).replace("%tag%", getFormattedTag(id)));
-            gui.openMain(p, id);
+            p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.2f);
+            openMain(p, id);
             return true;
         }
 
@@ -203,7 +211,12 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, Listene
             if (target == null || getPlayerClan(target.getName()) != null) return true;
             invites.put(target.getUniqueId(), clanId);
             p.sendMessage(color(getConfig().getString("settings.prefix") + "&fПриглашение отправлено игроку &#00FF66" + target.getName()));
-            target.sendMessage(color(getConfig().getString("settings.prefix") + "&fВас пригласили в клан " + getFormattedTag(clanId) + "&f! Введите: &#00FF66/clan accept"));
+
+            TextComponent msg = new TextComponent(color(getConfig().getString("settings.prefix") + "&fВас пригласили в клан " + getFormattedTag(clanId) + " "));
+            TextComponent btn = new TextComponent(color("&#00FF66&l[✔ ВСТУПИТЬ]"));
+            btn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/clan accept"));
+            target.spigot().sendMessage(msg, btn);
+            target.playSound(target.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.2f);
             return true;
         }
 
@@ -257,6 +270,207 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, Listene
         }
 
         return true;
+    }
+    public void openMain(Player p, String clanId) {
+        String title = getConfig().getString("gui.main-title", "&#0055ff&l⚡ Клан &8| %tag%")
+                .replace("%tag%", getFormattedTag(clanId));
+        Inventory inv = Bukkit.createInventory(null, 45, color(title));
+        fillFrame(inv);
+
+        String owner = db.getString("clans." + clanId + ".owner", "Неизвестно");
+        List<String> members = db.getStringList("clans." + clanId + ".members");
+        int maxMembers = getConfig().getInt("settings.max-members", 10);
+        long bank = db.getLong("clans." + clanId + ".bank", 0);
+        boolean pvp = db.getBoolean("clans." + clanId + ".pvp", false);
+        String activeEff = db.getString("clans." + clanId + ".effect", "NONE");
+
+        inv.setItem(13, item(Material.BEACON, "&#0055ff&l[★] &#00E5FF&lИнформация о клане", List.of(
+                " &#0055ff● &fТег: " + getFormattedTag(clanId),
+                " &#0055ff● &fЛидер: &#00FF66" + owner,
+                " &#0055ff● &fУчастников: &#00E5FF" + members.size() + " / " + maxMembers,
+                " &#0055ff● &fСостав: &7" + String.join(", ", members),
+                " &#0055ff● &fКазна клана: &#00FF66" + fmt(bank) + " монет",
+                " &#0055ff● &fАктивный эффект: &#00E5FF" + getEffectDisplayName(activeEff)
+        )));
+
+        inv.setItem(20, item(Material.ENDER_PEARL, "&#0055ff&l[⌂] &#00E5FF&lКлановый дом (/clan home)", List.of(
+                " &#00FF66➥ Нажмите&f, чтобы телепортироваться",
+                " &7Установить точку: &#00E5FF/clan sethome"
+        )));
+
+        inv.setItem(21, item(Material.NAME_TAG, "&#0055ff&l[✎] &#00E5FF&lНастройка цвета тега", List.of(
+                " &#00FF66➥ Нажмите&f, чтобы выбрать цвет",
+                " &7Меняет цвет вашего тега в чате и табе!"
+        )));
+
+        inv.setItem(23, item(Material.BREWING_STAND, "&#0055ff&l[✦] &#00FF66&lЭффекты клана", List.of(
+                " &#00FF66➥ Нажмите&f, чтобы выбрать бафф",
+                " &7Даёт постоянный эффект всем участникам",
+                " &7клана в сети за счёт казны!"
+        )));
+
+        inv.setItem(24, item(pvp ? Material.DIAMOND_SWORD : Material.SHIELD,
+                "&#0055ff&l[⚔] &fОгонь по своим: " + (pvp ? "&c&lВКЛЮЧЕН" : "&#00FF66&lВЫКЛЮЧЕН"),
+                List.of(" &#00FF66➥ Нажмите&f, чтобы переключить PvP в клане")));
+
+        inv.setItem(31, item(Material.GOLD_INGOT, "&#0055ff&l[$] &#00FF66&lПополнение казны", List.of(
+                " &#0055ff● &fБаланс клана: &#00FF66" + fmt(bank),
+                " &7Положить деньги: &#00E5FF/clan deposit <сумма>"
+        )));
+
+        p.openInventory(inv);
+    }
+
+    public void openColors(Player p, String clanId) {
+        String title = getConfig().getString("gui.colors-title", "&#0055ff&l⚡ Выбор цвета тега");
+        Inventory inv = Bukkit.createInventory(null, 45, color(title));
+        fillFrame(inv);
+        slotToColor.clear();
+
+        String rawTag = db.getString("clans." + clanId + ".tag", "CLAN");
+        ConfigurationSection sec = getConfig().getConfigurationSection("colors");
+        if (sec != null) {
+            for (String key : sec.getKeys(false)) {
+                int slot = sec.getInt(key + ".slot", -1);
+                if (slot < 0 || slot >= 45) continue;
+                Material mat = Material.matchMaterial(sec.getString(key + ".material", "PAPER"));
+                if (mat == null) mat = Material.PAPER;
+                String code = sec.getString(key + ".code", "&f");
+                String name = sec.getString(key + ".name", key).replace("%preview%", code + rawTag);
+                inv.setItem(slot, item(mat, name, List.of(" &#00FF66➥ Нажмите&f, чтобы установить")));
+                slotToColor.put(slot, code);
+            }
+        }
+
+        inv.setItem(40, item(Material.ARROW, "&c[←] &fНазад в меню клана", null));
+        p.openInventory(inv);
+    }
+
+    public void openEffects(Player p, String clanId) {
+        String title = getConfig().getString("gui.effects-title", "&#0055ff&l⚡ Эффекты клана");
+        Inventory inv = Bukkit.createInventory(null, 45, color(title));
+        fillFrame(inv);
+        slotToEffect.clear();
+
+        long bank = db.getLong("clans." + clanId + ".bank", 0);
+        ConfigurationSection sec = getConfig().getConfigurationSection("effects");
+        if (sec != null) {
+            for (String effKey : sec.getKeys(false)) {
+                int slot = sec.getInt(effKey + ".slot", -1);
+                if (slot < 0 || slot >= 45) continue;
+                Material mat = Material.matchMaterial(sec.getString(effKey + ".material", "POTION"));
+                if (mat == null) mat = Material.POTION;
+                String dName = sec.getString(effKey + ".display-name", effKey);
+                long cost = sec.getLong(effKey + ".cost", 100000L);
+
+                List<String> lore = new ArrayList<>();
+                for (String line : sec.getStringList(effKey + ".lore")) lore.add(" " + line);
+                lore.add(" &7В казне: &#00FF66" + fmt(bank));
+                lore.add(" &#00FF66➥ Нажмите&f, чтобы активировать");
+
+                inv.setItem(slot, item(mat, "&#00E5FF&l" + dName + " &8(&#00FF66" + fmt(cost) + " монет&8)", lore));
+                slotToEffect.put(slot, effKey);
+            }
+        }
+
+        inv.setItem(40, item(Material.ARROW, "&c[←] &fНазад в меню клана", null));
+        p.openInventory(inv);
+    }
+    @EventHandler
+    public void onClick(InventoryClickEvent e) {
+        if (!(e.getWhoClicked() instanceof Player p)) return;
+        String title = e.getView().getTitle();
+        String mainPrefix = color(getConfig().getString("gui.main-title", "").split("%tag%"));
+        String colTitle = color(getConfig().getString("gui.colors-title", ""));
+        String effTitle = color(getConfig().getString("gui.effects-title", ""));
+
+        if (!title.startsWith(mainPrefix) && !title.equals(colTitle) && !title.equals(effTitle)) return;
+        e.setCancelled(true);
+
+        String clanId = getPlayerClan(p.getName());
+        if (clanId == null) { p.closeInventory(); return; }
+        boolean isOwner = db.getString("clans." + clanId + ".owner", "").equalsIgnoreCase(p.getName());
+        int slot = e.getRawSlot();
+
+        if (title.equals(colTitle)) {
+            if (slot == 40) { openMain(p, clanId); return; }
+            if (!isOwner) { sendMsg(p, "only-owner"); return; }
+            String newColor = slotToColor.get(slot);
+            if (newColor != null) {
+                db.set("clans." + clanId + ".color", newColor);
+                saveDb();
+                p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.3f);
+                p.sendMessage(getMsg("color-changed").replace("%tag%", getFormattedTag(clanId)));
+                openMain(p, clanId);
+            }
+            return;
+        }
+
+        if (title.equals(effTitle)) {
+            if (slot == 40) { openMain(p, clanId); return; }
+            if (!isOwner) { sendMsg(p, "only-owner"); return; }
+            String eff = slotToEffect.get(slot);
+            if (eff != null) {
+                long cost = getConfig().getLong("effects." + eff + ".cost", 100000L);
+                long bank = db.getLong("clans." + clanId + ".bank", 0);
+                if (bank < cost) {
+                    p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                    sendMsg(p, "not-enough-bank");
+                    return;
+                }
+                db.set("clans." + clanId + ".bank", bank - cost);
+                db.set("clans." + clanId + ".effect", eff);
+                saveDb();
+                p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.2f);
+                String msg = getConfig().getString("messages.effect-bought", "")
+                        .replace("%effect%", getEffectDisplayName(eff));
+                broadcastClan(clanId, msg);
+                openMain(p, clanId);
+            }
+            return;
+        }
+
+        switch (slot) {
+            case 20 -> { p.closeInventory(); Bukkit.dispatchCommand(p, "clan home"); }
+            case 21 -> openColors(p, clanId);
+            case 23 -> openEffects(p, clanId);
+            case 24 -> {
+                if (!isOwner) { sendMsg(p, "only-owner"); return; }
+                boolean cur = db.getBoolean("clans." + clanId + ".pvp", false);
+                db.set("clans." + clanId + ".pvp", !cur);
+                saveDb();
+                p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1.2f);
+                openMain(p, clanId);
+            }
+        }
+    }
+
+    private String getEffectDisplayName(String eff) {
+        if (eff == null || eff.equals("NONE")) return "Нет";
+        return getConfig().getString("effects." + eff + ".display-name", eff);
+    }
+
+    private void fillFrame(Inventory inv) {
+        ItemStack b = item(Material.BLUE_STAINED_GLASS_PANE, "&#0055ff▪", null);
+        ItemStack c = item(Material.LIGHT_BLUE_STAINED_GLASS_PANE, "&#00E5FF▫", null);
+        for (int s : new int[]{0,1,7,8,9,17,18,26,27,35,36,37,43,44}) inv.setItem(s, b);
+        for (int s : new int[]{2,3,4,5,6,38,39,40,41,42}) inv.setItem(s, c);
+    }
+
+    private ItemStack item(Material mat, String name, List<String> lore) {
+        ItemStack is = new ItemStack(mat);
+        ItemMeta meta = is.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(color(name));
+            if (lore != null) {
+                List<String> list = new ArrayList<>();
+                for (String s : lore) list.add(color(s));
+                meta.setLore(list);
+            }
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS);
+            is.setItemMeta(meta);
+        }
+        return is;
     }
 
     private long getPlayerMoney(Player p) {
