@@ -80,7 +80,7 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, Listene
                     }
                 }
             }
-        }.runTaskTimer(this, 40L, 80L);
+             }.runTaskTimer(this, 40L, 80L);
 
         Bukkit.getConsoleSender().sendMessage(color("&#0055ff   __  __ _        _____ _                "));
         Bukkit.getConsoleSender().sendMessage(color("&#0055ff  |  \\/  (_)_ __  |_   _(_)_ __ ___   ___ "));
@@ -88,6 +88,10 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, Listene
         Bukkit.getConsoleSender().sendMessage(color("&#00E5FF  | |  | | | |      | | | | | | | | |  __/"));
         Bukkit.getConsoleSender().sendMessage(color("&#00FF66  |_|  |_|_|_|      |_| |_|_| |_| |_|\\___|"));
         Bukkit.getConsoleSender().sendMessage(color("&#00E5FF  MirTimeClans v1.0.0 успешно запущен!"));
+
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            new ClanPlaceholder(this).register();
+        }
     }
 
     public void saveDb() {
@@ -524,5 +528,48 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, Listene
         }
         matcher.appendTail(buffer);
         return ChatColor.translateAlternateColorCodes('&', buffer.toString());
+    }
+}
+class ClanPlaceholder extends me.clip.placeholderapi.expansion.PlaceholderExpansion {
+
+    private final MirTimeClans plugin;
+
+    public ClanPlaceholder(MirTimeClans plugin) {
+        this.plugin = plugin;
+    }
+
+    @Override
+    public String getIdentifier() {
+        return "mirtimeclans";
+    }
+
+    @Override
+    public String getAuthor() {
+        return "Ars3nBar";
+    }
+
+    @Override
+    public String getVersion() {
+        return "1.0.0";
+    }
+
+    @Override
+    public boolean persist() {
+        return true;
+    }
+
+    @Override
+    public String onRequest(org.bukkit.OfflinePlayer player, String params) {
+        if (player == null) return "";
+        String clanId = plugin.getPlayerClan(player.getName());
+        if (clanId == null) return "";
+
+        if (params.equalsIgnoreCase("tag")) {
+            return plugin.getFormattedTag(clanId) + " ";
+        }
+        if (params.equalsIgnoreCase("raw_tag")) {
+            return plugin.db.getString("clans." + clanId + ".tag", "");
+        }
+        return "";
     }
 }
