@@ -82,6 +82,7 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, Listene
         Bukkit.getConsoleSender().sendMessage(color("&#00FF66  |_|  |_|_|_|      |_| |_|_| |_| |_|\\___|"));
         Bukkit.getConsoleSender().sendMessage(color("&#00E5FF  MirTimeClans v1.0.0 успешно запущен!"));
     }
+
     public void saveDb() {
         try { db.save(dbFile); } catch (IOException ignored) {}
     }
@@ -123,7 +124,6 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, Listene
             if (target != null) target.sendMessage(color(cPrefix + msg));
         }
     }
-
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
@@ -176,6 +176,7 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, Listene
             gui.openMain(p, id);
             return true;
         }
+
         if (sub.equals("accept")) {
             String invClan = invites.remove(p.getUniqueId());
             if (invClan == null || !db.contains("clans." + invClan)) return true;
