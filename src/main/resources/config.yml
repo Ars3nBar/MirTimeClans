@@ -1,0 +1,99 @@
+#    __  __ _        _____ _                
+#   |  \/  (_)_ __  |_   _(_)_ __ ___   ___ 
+#   | |\/| | | '__|   | | | | '_ ` _ \ / _ \
+#   | |  | | | |      | | | | | | | | |  __/
+#   |_|  |_|_|_|      |_| |_|_| |_| |_|\___|
+#                                           
+#   Project: Mir Time | Author: Ars3nBar
+
+settings:
+  prefix: "&#0055ff&l⚡ &#00E5FF&lMIR-TIME &8» "
+  clan-chat-prefix: "&#0055ff&l[КЛАН] &8» "
+  max-members: 10
+  min-tag-length: 2
+  max-tag-length: 6
+  default-tag-color: "&#00E5FF&l"
+
+gui:
+  main-title: "&#0055ff&l⚡ &#00E5FF&lКлан &8| %tag%"
+  colors-title: "&#0055ff&l⚡ Клан: &#00E5FF&lВыбор цвета тега"
+  effects-title: "&#0055ff&l⚡ Клан: &#00FF66&lЭффекты клана"
+
+colors:
+  cyan:
+    slot: 20
+    material: LIGHT_BLUE_DYE
+    name: "&#00E5FF&lНеоново-голубой &8[%preview%&8]"
+    code: "&#00E5FF&l"
+  lime:
+    slot: 21
+    material: LIME_DYE
+    name: "&#00FF66&lИзумрудно-зелёный &8[%preview%&8]"
+    code: "&#00FF66&l"
+  red:
+    slot: 22
+    material: RED_DYE
+    name: "&c&lКроваво-красный &8[%preview%&8]"
+    code: "&c&l"
+  gold:
+    slot: 23
+    material: YELLOW_DYE
+    name: "&e&lЗолото-жёлтый &8[%preview%&8]"
+    code: "&e&l"
+  purple:
+    slot: 24
+    material: PURPLE_DYE
+    name: "&d&lФиолетовый неон &8[%preview%&8]"
+    code: "&d&l"
+
+effects:
+  SPEED:
+    slot: 20
+    material: SUGAR
+    display-name: "Скорость I"
+    cost: 250000
+    level: 0
+    lore:
+      - "&7Постоянный ускоренный бег для всего клана"
+  FIRE_RESISTANCE:
+    slot: 21
+    material: FIRE_CHARGE
+    display-name: "Огнестойкость"
+    cost: 300000
+    level: 0
+    lore:
+      - "&7Полная защита от лавы и огня для всех"
+  HASTE:
+    slot: 23
+    material: GOLDEN_PICKAXE
+    display-name: "Спешка I"
+    cost: 400000
+    level: 0
+    lore:
+      - "&7Быстрое копание шахт и обсидиана"
+  STRENGTH:
+    slot: 24
+    material: BLAZE_POWDER
+    display-name: "Сила I"
+    cost: 750000
+    level: 0
+    lore:
+      - "&7Повышенный урон в PvP для всего клана"
+
+messages:
+  no-clan: "&cВы не состоите в клане! Создайте: &#00FF66/clan create <тег>"
+  already-in-clan: "&cВы уже состоите в клане!"
+  only-owner: "&cЭто действие доступно только лидеру клана!"
+  tag-length: "&cТег должен быть от %min% до %max% символов!"
+  tag-exists: "&cКлан с таким тегом уже существует!"
+  clan-full: "&cВ клане достигнут лимит участников (%max%)!"
+  created: "&fИгрок &#00FF66%player% &fосновал новый клан %tag%&f!"
+  color-changed: "&#00FF66Цвет кланового тега обновлён: %tag%"
+  effect-bought: "&#00FF66Лидер активировал клановый эффект: &#00E5FF%effect%&#00FF66!"
+  not-enough-bank: "&cВ казне клана недостаточно средств! Пополните: &#00FF66/clan deposit <сумма>"
+  not-enough-money: "&cУ вас недостаточно монет на балансе!"
+  deposited: "&fИгрок &#00FF66%player% &fпополнил казну на &#00FF66%amount% монет&f!"
+  home-set: "&#00FF66Точка кланового дома успешно установлена!"
+  home-tp: "&fВы телепортированы на базу клана!"
+  home-not-set: "&cКлановый дом ещё не установлен (/clan sethome)!"
+  reloaded: "&#00FF66Конфигурация config.yml успешно перезагружена!"
