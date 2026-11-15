@@ -1,0 +1,23 @@
+#    __  __ _        _____ _                
+#   |  \/  (_)_ __  |_   _(_)_ __ ___   ___ 
+#   | |\/| | | '__|   | | | | '_ ` _ \ / _ \
+#   | |  | | | |      | | | | | | | | |  __/
+#   |_|  |_|_|_|      |_| |_|_| |_| |_|\___|
+#                                           
+#   Project: Mir Time | Author: Ars3nBar
+
+name: MirTimeClans
+version: '1.0.0'
+main: ru.mirtime.clans.MirTimeClans
+api-version: '1.21'
+softdepend:
+  - PlaceholderAPI
+  - Vault
+commands:
+  clan:
+    description: Меню и управление кланом
+    aliases: [c, клан, clans]
+permissions:
+  mirtime.clans.reload:
+    description: Перезагрузка конфига кланов
+    default: op
