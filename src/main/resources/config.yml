@@ -8,43 +8,113 @@
 
 settings:
   prefix: "&#0055ff&l⚡ &#00E5FF&lMIR-TIME &8» "
-  clan-chat-prefix: "&#0055ff&l[КЛАН] &8» "
-  max-members: 10
+  clan-chat-format: "&#0055ff&l[КЛАН] %rank% &#00E5FF%player% &8» &f%message%"
+  tag-format: "&8[%tag%&8] "
+  create-cost: 25000.0
   min-tag-length: 2
-  max-tag-length: 6
-  default-tag-color: "&#00E5FF&l"
+  max-tag-length: 8
+  default-tag-color: "&#00E5FF"
+  default-tag-style: "&l"
+  home-teleport-delay: 3
 
 gui:
   main-title: "&#0055ff&l⚡ &#00E5FF&lКлан &8| %tag%"
-  colors-title: "&#0055ff&l⚡ Клан: &#00E5FF&lВыбор цвета тега"
+  colors-title: "&#0055ff&l⚡ Клан: &#00E5FF&lСтиль и цвет тега"
   effects-title: "&#0055ff&l⚡ Клан: &#00FF66&lЭффекты клана"
+  storage-title: "&#0055ff&l📦 Склад клана &8| %tag%"
+
+levels:
+  1:
+    max-members: 10
+    cost: 0.0
+  2:
+    max-members: 15
+    cost: 50000.0
+  3:
+    max-members: 20
+    cost: 150000.0
+  4:
+    max-members: 25
+    cost: 350000.0
+  5:
+    max-members: 30
+    cost: 750000.0
 
 colors:
   cyan:
-    slot: 20
+    slot: 10
     material: LIGHT_BLUE_DYE
-    name: "&#00E5FF&lНеоново-голубой &8[%preview%&8]"
-    code: "&#00E5FF&l"
+    name: "&#00E5FF&lНеоново-голубой"
+    code: "&#00E5FF"
+    cost: 0.0
   lime:
-    slot: 21
+    slot: 11
     material: LIME_DYE
-    name: "&#00FF66&lИзумрудно-зелёный &8[%preview%&8]"
-    code: "&#00FF66&l"
+    name: "&#00FF66&lИзумрудно-зелёный"
+    code: "&#00FF66"
+    cost: 5000.0
   red:
-    slot: 22
+    slot: 12
     material: RED_DYE
-    name: "&c&lКроваво-красный &8[%preview%&8]"
-    code: "&c&l"
+    name: "&c&lКроваво-красный"
+    code: "&c"
+    cost: 10000.0
   gold:
-    slot: 23
+    slot: 13
     material: YELLOW_DYE
-    name: "&e&lЗолото-жёлтый &8[%preview%&8]"
-    code: "&e&l"
+    name: "&e&lЗолото-жёлтый"
+    code: "&e"
+    cost: 15000.0
   purple:
-    slot: 24
+    slot: 14
     material: PURPLE_DYE
-    name: "&d&lФиолетовый неон &8[%preview%&8]"
-    code: "&d&l"
+    name: "&d&lФиолетовый неон"
+    code: "&d"
+    cost: 20000.0
+  blue_grad:
+    slot: 15
+    material: BLUE_DYE
+    name: "&#0055ff&lКибер-синий"
+    code: "&#0055ff"
+    cost: 25000.0
+  white:
+    slot: 16
+    material: WHITE_DYE
+    name: "&f&lБелоснежный"
+    code: "&f"
+    cost: 5000.0
+
+styles:
+  bold:
+    slot: 29
+    material: ANVIL
+    name: "&f&lЖирный шрифт"
+    code: "&l"
+    cost: 0.0
+  italic:
+    slot: 30
+    material: FEATHER
+    name: "&f&oКурсивный шрифт"
+    code: "&o"
+    cost: 10000.0
+  underline:
+    slot: 31
+    material: STICK
+    name: "&f&nПодчёркнутый шрифт"
+    code: "&n"
+    cost: 15000.0
+  strike:
+    slot: 32
+    material: SHEARS
+    name: "&f&mЗачёркнутый шрифт"
+    code: "&m"
+    cost: 20000.0
+  normal:
+    slot: 33
+    material: PAPER
+    name: "&fОбычный шрифт"
+    code: ""
+    cost: 0.0
 
 effects:
   SPEED:
@@ -84,11 +154,12 @@ messages:
   no-clan: "&cВы не состоите в клане! Создайте: &#00FF66/clan create <тег>"
   already-in-clan: "&cВы уже состоите в клане!"
   only-owner: "&cЭто действие доступно только лидеру клана!"
+  only-officer: "&cЭто действие доступно только лидеру и офицерам клана!"
   tag-length: "&cТег должен быть от %min% до %max% символов!"
   tag-exists: "&cКлан с таким тегом уже существует!"
-  clan-full: "&cВ клане достигнут лимит участников (%max%)!"
+  clan-full: "&cВ клане достигнут лимит участников (%max%)! Улучшите клан: &#00FF66/clan upgrade"
   created: "&fИгрок &#00FF66%player% &fосновал новый клан %tag%&f!"
-  color-changed: "&#00FF66Цвет кланового тега обновлён: %tag%"
+  color-changed: "&#00FF66Оформление кланового тега обновлено: %tag%"
   effect-bought: "&#00FF66Лидер активировал клановый эффект: &#00E5FF%effect%&#00FF66!"
   not-enough-bank: "&cВ казне клана недостаточно средств! Пополните: &#00FF66/clan deposit <сумма>"
   not-enough-money: "&cУ вас недостаточно монет на балансе!"
