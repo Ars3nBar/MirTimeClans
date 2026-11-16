@@ -803,7 +803,67 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
 
             double cost = getConfig().getDouble("effects." + eKey + ".cost", 250000.0);
             double bank = db.getDouble("clans." + clanId + ".bank", 0.0);
-            if (bank  &7- Создать новый клан"));
+            if (bank < cost) { p.sendMessage(msg("not-enough-bank")); return; }
+
+            db.set("clans." + clanId + ".bank", bank - cost);
+            owned.add(eKey);
+            db.set("clans." + clanId + ".effects", owned);
+            saveDb();
+
+            String dName = getConfig().getString("effects." + eKey + ".display-name", eKey);
+            p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1.2f);
+            sendClanMessage(clanId, msg("effect-bought").replace("%effect%", dName));
+            openEffectsMenu(p, clanId);
+        }
+    }
+    @EventHandler
+    public void onJoin(PlayerJoinEvent e) {
+        String clanId = getPlayerClan(e.getPlayer().getName());
+        if (clanId != null && db.contains("clans." + clanId + ".motd")) {
+            e.getPlayer().sendMessage(color("&#0055ff&l[КЛАН] &eОбъявление: &f" + db.getString("clans." + clanId + ".motd")));
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onToggleChat(AsyncChatEvent e) {
+        Player p = e.getPlayer();
+        if (!toggleChat.contains(p.getUniqueId())) return;
+        String clanId = getPlayerClan(p.getName());
+        if (clanId == null) { toggleChat.remove(p.getUniqueId()); return; }
+        e.setCancelled(true);
+        String text = PlainTextComponentSerializer.plainText().serialize(e.message());
+        String fmt = getConfig().getString("settings.clan-chat-format", "&#0055ff&l[КЛАН] %rank% &#00E5FF%player% &8» &f%message%");
+        sendClanMessage(clanId, fmt.replace("%rank%", getRolePrefix(getRole(clanId, p.getName()))).replace("%player%", p.getName()).replace("%message%", text));
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onFriendlyFire(EntityDamageByEntityEvent e) {
+        if (!(e.getEntity() instanceof Player victim)) return;
+        Player attacker = null;
+        if (e.getDamager() instanceof Player p) attacker = p;
+        else if (e.getDamager() instanceof org.bukkit.entity.Projectile proj && proj.getShooter() instanceof Player p) attacker = p;
+        if (attacker == null || attacker.equals(victim)) return;
+
+        String c1 = getPlayerClan(attacker.getName());
+        String c2 = getPlayerClan(victim.getName());
+        if (c1 != null && c1.equals(c2) && !db.getBoolean("clans." + c1 + ".pvp", false)) e.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onKill(PlayerDeathEvent e) {
+        Player killer = e.getEntity().getKiller();
+        if (killer == null) return;
+        String clanId = getPlayerClan(killer.getName());
+        if (clanId != null) {
+            db.set("clans." + clanId + ".kills", db.getInt("clans." + clanId + ".kills", 0) + 1);
+            saveDb();
+        }
+    }
+
+    private void sendHelp(Player p) {
+        p.sendMessage(color("&#0055ff&l&m                                                "));
+        p.sendMessage(color(" &#0055ff&l⚡ &#00E5FF&lСИСТЕМА КЛАНОВ MIR-TIME"));
+        p.sendMessage(color(" &#00FF66/clan create <тег> &7- Создать новый клан"));
         p.sendMessage(color(" &#00FF66/clan color &7- Цвет и шрифт тега"));
         p.sendMessage(color(" &#00FF66/clan effects &7- Пассивные эффекты клана"));
         p.sendMessage(color(" &#00FF66/clan storage &7- Общий склад клана"));
@@ -851,15 +911,6 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
         StringBuffer buffer = new StringBuffer();
         while (matcher.find()) {
             String hex = matcher.group(1);
-            StringBuilder rep = new StringBuilder("§x");
-            for (char c : hex.toCharArray()) rep.append('§').append(c);
-            matcher.appendReplacement(buffer, rep.toString());
-        }
-        matcher.appendTail(buffer);
-        return ChatColor.translateAlternateColorCodes('&', buffer.toString());
-    }
-}
-          String hex = matcher.group(1);
             StringBuilder rep = new StringBuilder("§x");
             for (char c : hex.toCharArray()) rep.append('§').append(c);
             matcher.appendReplacement(buffer, rep.toString());
