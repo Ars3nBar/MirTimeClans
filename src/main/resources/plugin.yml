@@ -7,17 +7,22 @@
 #   Project: Mir Time | Author: Ars3nBar
 
 name: MirTimeClans
-version: '1.0.0'
+version: '2.0.0'
 main: ru.mirtime.clans.MirTimeClans
 api-version: '1.21'
 softdepend:
-  - PlaceholderAPI
   - Vault
+  - PlaceholderAPI
 commands:
   clan:
-    description: Меню и управление кланом
-    aliases: [c, клан, clans]
+    description: Управление кланом Mir-Time
+    aliases: [clans, клан, к]
+  c:
+    description: Написать сообщение в клановый чат
+    aliases: [clanchat, кч]
+  cc:
+    description: Переключить постоянный режим кланового чата
 permissions:
-  mirtime.clans.reload:
-    description: Перезагрузка конфига кланов
+  mirtime.clans.admin:
+    description: Административное управление кланами
     default: op
