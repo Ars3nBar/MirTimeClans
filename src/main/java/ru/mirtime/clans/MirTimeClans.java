@@ -803,17 +803,17 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
 
             double cost = getConfig().getDouble("effects." + eKey + ".cost", 250000.0);
             double bank = db.getDouble("clans." + clanId + ".bank", 0.0);
-            if (bank  &7— Создать новый клан"));
-        p.sendMessage(color(" &#00FF66/clan color &7— Цвет и шрифт тега (жирный, курсив и др.)"));
-        p.sendMessage(color(" &#00FF66/clan effects &7— Пассивные эффекты для всего клана"));
-        p.sendMessage(color(" &#00FF66/clan storage &7— Общий склад клана на 27 слотов"));
-        p.sendMessage(color(" &#00FF66/clan top &7— Топ-10 сильнейших кланов сервера"));
-        p.sendMessage(color(" &#00FF66/clan motd <текст> &7— Задать объявление при входе"));
-        p.sendMessage(color(" &#00FF66/clan leader <ник> &7— Передать лидерство клана"));
-        p.sendMessage(color(" &#00FF66/clan sethome &8| &f/clan home &7— База клана"));
-        p.sendMessage(color(" &#00FF66/clan deposit <сумма> &7— Пополнить казну клана"));
-        p.sendMessage(color(" &#00FF66/clan upgrade &7— Прокачать уровень клана"));
-        p.sendMessage(color(" &#00E5FF/c <текст> &8| &f/cc &7— Клановый чат"));
+            if (bank  &7- Создать новый клан"));
+        p.sendMessage(color(" &#00FF66/clan color &7- Цвет и шрифт тега"));
+        p.sendMessage(color(" &#00FF66/clan effects &7- Пассивные эффекты клана"));
+        p.sendMessage(color(" &#00FF66/clan storage &7- Общий склад клана"));
+        p.sendMessage(color(" &#00FF66/clan top &7- Топ-10 кланов сервера"));
+        p.sendMessage(color(" &#00FF66/clan motd <текст> &7- Объявление клана"));
+        p.sendMessage(color(" &#00FF66/clan leader <ник> &7- Передать лидерство"));
+        p.sendMessage(color(" &#00FF66/clan sethome &8| &f/clan home &7- База клана"));
+        p.sendMessage(color(" &#00FF66/clan deposit <сумма> &7- Пополнить казну"));
+        p.sendMessage(color(" &#00FF66/clan upgrade &7- Прокачать уровень клана"));
+        p.sendMessage(color(" &#00E5FF/c <текст> &8| &f/cc &7- Клановый чат"));
         p.sendMessage(color("&#0055ff&l&m                                                "));
     }
 
@@ -851,6 +851,15 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
         StringBuffer buffer = new StringBuffer();
         while (matcher.find()) {
             String hex = matcher.group(1);
+            StringBuilder rep = new StringBuilder("§x");
+            for (char c : hex.toCharArray()) rep.append('§').append(c);
+            matcher.appendReplacement(buffer, rep.toString());
+        }
+        matcher.appendTail(buffer);
+        return ChatColor.translateAlternateColorCodes('&', buffer.toString());
+    }
+}
+          String hex = matcher.group(1);
             StringBuilder rep = new StringBuilder("§x");
             for (char c : hex.toCharArray()) rep.append('§').append(c);
             matcher.appendReplacement(buffer, rep.toString());
