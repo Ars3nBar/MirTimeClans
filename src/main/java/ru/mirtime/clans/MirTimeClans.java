@@ -149,39 +149,6 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
     }
 
     private void registerPlaceholder() {
-        try {
-            if (!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) return;
-            Class<?> expClass = Class.forName("me.clip.placeholderapi.expansion.PlaceholderExpansion");
-            Object expansion = Proxy.newProxyInstance(getClassLoader(), new Class<?>[]{expClass}, (proxy, method, args) -> {
-                switch (method.getName()) {
-                    case "getIdentifier" -> { return "mirtimeclans"; }
-                    case "getAuthor" -> { return "Ars3nBar"; }
-                    case "getVersion" -> { return "2.1.0"; }
-                    case "persist" -> { return true; }
-                    case "canRegister" -> { return true; }
-                    case "onRequest", "onPlaceholderRequest" -> {
-                        OfflinePlayer op = (OfflinePlayer) args[0];
-                        String id = ((String) args[1]).toLowerCase();
-                        if (op == null) return "";
-                        String clanId = getPlayerClan(op.getName());
-                        if (clanId == null) return "";
-                        if (id.equals("tag")) {
-                            String fmt = getConfig().getString("settings.tag-format", "&8[%tag%&8] ");
-                            return color(fmt.replace("%tag%", getFormattedTag(clanId)));
-                        }
-                        if (id.equals("name")) return color(getFormattedTag(clanId));
-                        if (id.equals("level")) return String.valueOf(db.getInt("clans." + clanId + ".level", 1));
-                        if (id.equals("kills")) return String.valueOf(db.getInt("clans." + clanId + ".kills", 0));
-                        return "";
-                    }
-                }
-                return null;
-            });
-            expClass.getMethod("register").invoke(expansion);
-        } catch (Exception ignored) {}
-    }
-
-    private void registerPlaceholder() {
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new ClansExpansion(this).register();
         }
@@ -202,6 +169,19 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
 
     private void saveDb() {
         try { db.save(clansFile); } catch (IOException ignored) {}
+    }
+
+    private String getPlayerClan(String playerName) {
+        return db.getString("players." + playerName.toLowerCase());
+    }
+
+    private String getRole(String clanId, String playerName) {
+        String leader = db.getString("clans." + clanId + ".leader", "");
+        if (leader.equalsIgnoreCase(playerName)) return "LEADER";
+        for (String off : db.getStringList("clans." + clanId + ".officers")) {
+            if (off.equalsIgnoreCase(playerName)) return "OFFICER";
+        }
+        return "MEMBER";
     }
 
     private String getRolePrefix(String role) {
