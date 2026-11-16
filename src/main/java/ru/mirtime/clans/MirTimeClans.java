@@ -741,10 +741,10 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
     @EventHandler
     public void onClanMenuClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
-        String title = e.getView().getTitle();
+        String cleanTitle = ChatColor.stripColor(e.getView().getTitle());
         String clanId = getPlayerClan(p.getName());
 
-        if (title.contains("Клан |")) {
+        if (cleanTitle.contains("Клан |")) {
             e.setCancelled(true);
             if (clanId == null) return;
             int slot = e.getRawSlot();
@@ -765,7 +765,7 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
                 openClanMenu(p, clanId);
             }
             else if (slot == 52) { p.closeInventory(); Bukkit.dispatchCommand(p, "clan rally"); }
-        } else if (title.contains("Стиль и цвет тега")) {
+        } else if (cleanTitle.contains("Стиль и цвет тега")) {
             e.setCancelled(true);
             if (clanId == null) return;
             if (e.getRawSlot() == 40) { openClanMenu(p, clanId); return; }
@@ -796,7 +796,7 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
                 sendClanMessage(clanId, msg("color-changed").replace("%tag%", getFormattedTag(clanId)));
                 openColorsMenu(p, clanId);
             }
-        } else if (title.contains("Эффекты клана")) {
+        } else if (cleanTitle.contains("Эффекты клана")) {
             e.setCancelled(true);
             if (clanId == null) return;
             if (e.getRawSlot() == 40) { openClanMenu(p, clanId); return; }
