@@ -160,8 +160,8 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
                     case "persist" -> { return true; }
                     case "canRegister" -> { return true; }
                     case "onRequest", "onPlaceholderRequest" -> {
-                        OfflinePlayer op = (OfflinePlayer) args;
-                        String id = ((String) args).toLowerCase();
+                        OfflinePlayer op = (OfflinePlayer) args[0];
+                        String id = ((String) args[1]).toLowerCase();
                         if (op == null) return "";
                         String clanId = getPlayerClan(op.getName());
                         if (clanId == null) return "";
