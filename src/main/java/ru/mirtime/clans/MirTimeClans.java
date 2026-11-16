@@ -13,7 +13,6 @@ import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
-import net.milkbowl.vault.economy.Economy;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -52,7 +51,7 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
 
     private File clansFile;
     private YamlConfiguration db;
-    private Economy econ;
+    private Object econ;
 
     private final Map<UUID, String> invites = new HashMap<>();
     private final Set<UUID> toggleChat = new HashSet<>();
@@ -106,11 +105,34 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
         Bukkit.getConsoleSender().sendMessage(color("&#00FF66  |_|  |_|_|_|      |_| |_|_| |_| |_|\\___|"));
         Bukkit.getConsoleSender().sendMessage(color("&#00E5FF  MirTimeClans v2.1.0 успешно запущен!"));
     }
-
     private void setupEconomy() {
-        if (Bukkit.getPluginManager().getPlugin("Vault") == null) return;
-        RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
-        if (rsp != null) econ = rsp.getProvider();
+        try {
+            if (Bukkit.getPluginManager().getPlugin("Vault") == null) return;
+            Class<?> econClass = Class.forName("net.milkbowl.vault.economy.Economy");
+            RegisteredServiceProvider<?> rsp = getServer().getServicesManager().getRegistration(econClass);
+            if (rsp != null) econ = rsp.getProvider();
+        } catch (Exception ignored) {}
+    }
+
+    private double getBalance(Player p) {
+        if (econ == null) return 0.0;
+        try {
+            return (double) econ.getClass().getMethod("getBalance", OfflinePlayer.class).invoke(econ, p);
+        } catch (Exception e) { return 0.0; }
+    }
+
+    private void withdraw(Player p, double amount) {
+        if (econ == null) return;
+        try {
+            econ.getClass().getMethod("withdrawPlayer", OfflinePlayer.class, double.class).invoke(econ, p, amount);
+        } catch (Exception ignored) {}
+    }
+
+    private void deposit(Player p, double amount) {
+        if (econ == null) return;
+        try {
+            econ.getClass().getMethod("depositPlayer", OfflinePlayer.class, double.class).invoke(econ, p, amount);
+        } catch (Exception ignored) {}
     }
 
     private String msg(String key) {
@@ -257,8 +279,8 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
                 String id = raw.toLowerCase().replaceAll("[^a-zа-яё0-9_]", "");
                 if (id.isEmpty() || db.contains("clans." + id)) { p.sendMessage(msg("tag-exists")); return true; }
                 double cost = getConfig().getDouble("settings.create-cost", 25000.0);
-                if (econ != null && econ.getBalance(p) < cost) { p.sendMessage(msg("not-enough-money")); return true; }
-                if (econ != null) econ.withdrawPlayer(p, cost);
+                if (econ != null && getBalance(p) < cost) { p.sendMessage(msg("not-enough-money")); return true; }
+                if (econ != null) withdraw(p, cost);
 
                 db.set("clans." + id + ".raw-tag", raw);
                 db.set("clans." + id + ".color", getConfig().getString("settings.default-tag-color", "&#00E5FF"));
@@ -317,7 +339,6 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
                 saveDb();
                 sendClanMessage(clanId, prefix + "&#00FF66&l[НОВЫЙ ЛИДЕР] &f" + p.getName() + " &eпередал лидерство клана игроку &#00FF66" + targetName + "&e!");
             }
-
             case "invite" -> {
                 if (clanId == null) { p.sendMessage(msg("no-clan")); return true; }
                 if (getRole(clanId, p.getName()).equals("MEMBER")) { p.sendMessage(msg("only-officer")); return true; }
@@ -356,6 +377,219 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
                 saveDb();
                 sendClanMessage(invClan, prefix + "&#00FF66Игрок &f" + p.getName() + " &#00FF66вступил в клан!");
             }
+
+            case "kick" -> {
+                if (clanId == null || getRole(clanId, p.getName()).equals("MEMBER") || args.length < 2) return true;
+                String targetName = List.of(args).get(1);
+                if (!clanId.equals(getPlayerClan(targetName)) || getRole(clanId, targetName).equals("LEADER")) return true;
+                removeMember(clanId, targetName);
+                sendClanMessage(clanId, prefix + "&cИгрок &f" + targetName + " &cисключён из клана.");
+            }
+
+            case "promote", "demote" -> {
+                if (clanId == null || !getRole(clanId, p.getName()).equals("LEADER") || args.length < 2) {
+                    p.sendMessage(msg("only-owner"));
+                    return true;
+                }
+                String targetName = List.of(args).get(1);
+                if (!clanId.equals(getPlayerClan(targetName)) || targetName.equalsIgnoreCase(p.getName())) return true;
+                List<String> officers = new ArrayList<>(db.getStringList("clans." + clanId + ".officers"));
+                officers.removeIf(s -> s.equalsIgnoreCase(targetName));
+                if (sub.equals("promote")) {
+                    officers.add(targetName);
+                    sendClanMessage(clanId, prefix + "&#00E5FFИгрок &f" + targetName + " &#00E5FFназначен Офицером!");
+                } else {
+                    sendClanMessage(clanId, prefix + "&eИгрок &f" + targetName + " &eпонижен до Бойца.");
+                }
+                db.set("clans." + clanId + ".officers", officers);
+                saveDb();
+            }
+
+            case "leave" -> {
+                if (clanId == null) { p.sendMessage(msg("no-clan")); return true; }
+                if (getRole(clanId, p.getName()).equals("LEADER")) {
+                    p.sendMessage(prefix + color("&cЛидер не может просто выйти! Передайте лидерство (&e/clan leader&c) или распустите (&e/clan disband&c)."));
+                    return true;
+                }
+                removeMember(clanId, p.getName());
+                p.sendMessage(prefix + color("&7Вы покинули клан."));
+                sendClanMessage(clanId, prefix + "&eИгрок &f" + p.getName() + " &eпокинул клан.");
+            }
+
+            case "disband" -> {
+                if (clanId == null || !getRole(clanId, p.getName()).equals("LEADER")) { p.sendMessage(msg("only-owner")); return true; }
+                for (String m : db.getStringList("clans." + clanId + ".members")) db.set("players." + m.toLowerCase(), null);
+                db.set("clans." + clanId, null);
+                saveDb();
+                p.sendMessage(prefix + color("&cВаш клан был распущен."));
+            }
+            case "sethome" -> {
+                if (clanId == null) { p.sendMessage(msg("no-clan")); return true; }
+                if (getRole(clanId, p.getName()).equals("MEMBER")) { p.sendMessage(msg("only-officer")); return true; }
+                Location l = p.getLocation();
+                db.set("clans." + clanId + ".home.world", l.getWorld().getName());
+                db.set("clans." + clanId + ".home.x", l.getX());
+                db.set("clans." + clanId + ".home.y", l.getY());
+                db.set("clans." + clanId + ".home.z", l.getZ());
+                db.set("clans." + clanId + ".home.yaw", l.getYaw());
+                db.set("clans." + clanId + ".home.pitch", l.getPitch());
+                saveDb();
+                sendClanMessage(clanId, msg("home-set"));
+            }
+
+            case "home" -> {
+                if (clanId == null) { p.sendMessage(msg("no-clan")); return true; }
+                if (!db.contains("clans." + clanId + ".home.world")) { p.sendMessage(msg("home-not-set")); return true; }
+                World w = Bukkit.getWorld(db.getString("clans." + clanId + ".home.world", ""));
+                if (w == null) return true;
+                Location dest = new Location(w, db.getDouble("clans." + clanId + ".home.x"), db.getDouble("clans." + clanId + ".home.y"), db.getDouble("clans." + clanId + ".home.z"), (float) db.getDouble("clans." + clanId + ".home.yaw"), (float) db.getDouble("clans." + clanId + ".home.pitch"));
+                int delay = getConfig().getInt("settings.home-teleport-delay", 3);
+                Location startLoc = p.getLocation().getBlock().getLocation();
+                p.sendMessage(prefix + color("&fТелепортация на базу через &#00E5FF" + delay + " сек.&f Не двигайтесь!"));
+                new BukkitRunnable() {
+                    int left = delay;
+                    @Override
+                    public void run() {
+                        if (!p.isOnline() || !p.getLocation().getBlock().getLocation().equals(startLoc)) {
+                            p.sendMessage(prefix + color("&cТелепортация отменена — вы сдвинулись!"));
+                            cancel();
+                            return;
+                        }
+                        if (left <= 0) {
+                            p.teleport(dest);
+                            p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1.1f);
+                            p.sendMessage(msg("home-tp"));
+                            cancel();
+                            return;
+                        }
+                        left--;
+                    }
+                }.runTaskTimer(this, 0L, 20L);
+            }
+
+            case "rally" -> {
+                if (clanId == null) { p.sendMessage(msg("no-clan")); return true; }
+                if (getRole(clanId, p.getName()).equals("MEMBER")) { p.sendMessage(msg("only-officer")); return true; }
+                Location l = p.getLocation();
+                sendClanMessage(clanId, prefix + "&c&l[СБОР КЛАНА] &f" + p.getName() + " &eсозывает всех на координаты: &#00FF66" + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ() + " &8(&7Мир: " + l.getWorld().getName() + "&8)");
+            }
+
+            case "storage" -> {
+                if (clanId == null) { p.sendMessage(msg("no-clan")); return true; }
+                openClanStorage(p, clanId);
+            }
+
+            case "deposit" -> {
+                if (clanId == null || econ == null || args.length < 2) return true;
+                double amt;
+                try { amt = Double.parseDouble(List.of(args).get(1)); } catch (Exception e) { return true; }
+                if (amt <= 0 || getBalance(p) < amt) { p.sendMessage(msg("not-enough-money")); return true; }
+                withdraw(p, amt);
+                double bank = db.getDouble("clans." + clanId + ".bank", 0.0) + amt;
+                db.set("clans." + clanId + ".bank", bank);
+                saveDb();
+                sendClanMessage(clanId, msg("deposited").replace("%player%", p.getName()).replace("%amount%", String.valueOf((int) amt)));
+            }
+
+            case "withdraw" -> {
+                if (clanId == null || econ == null || !getRole(clanId, p.getName()).equals("LEADER") || args.length < 2) { p.sendMessage(msg("only-owner")); return true; }
+                double amt;
+                try { amt = Double.parseDouble(List.of(args).get(1)); } catch (Exception e) { return true; }
+                double bank = db.getDouble("clans." + clanId + ".bank", 0.0);
+                if (amt <= 0 || bank < amt) { p.sendMessage(msg("not-enough-bank")); return true; }
+                db.set("clans." + clanId + ".bank", bank - amt);
+                saveDb();
+                deposit(p, amt);
+                p.sendMessage(prefix + color("&#00FF66Вы сняли из казны клана &f" + (int) amt + " монет&#00FF66."));
+            }
+
+            case "upgrade" -> {
+                if (clanId == null || !getRole(clanId, p.getName()).equals("LEADER")) { p.sendMessage(msg("only-owner")); return true; }
+                upgradeClan(p, clanId);
+            }
+        }
+        return true;
+    }
+    private void sendClanTop(Player p) {
+        ConfigurationSection sec = db.getConfigurationSection("clans");
+        p.sendMessage(color("&#0055ff&l&m                                                "));
+        p.sendMessage(color(" &#0055ff&l🏆 &#00E5FF&lТОП-10 КЛАНОВ СЕРВЕРА MIR-TIME"));
+        if (sec == null || sec.getKeys(false).isEmpty()) {
+            p.sendMessage(color(" &7Кланы ещё не созданы."));
+        } else {
+            List<String> ids = new ArrayList<>(sec.getKeys(false));
+            ids.sort((a, b) -> {
+                int scoreA = db.getInt("clans." + a + ".level", 1) * 100 + db.getInt("clans." + a + ".kills", 0);
+                int scoreB = db.getInt("clans." + b + ".level", 1) * 100 + db.getInt("clans." + b + ".kills", 0);
+                return Integer.compare(scoreB, scoreA);
+            });
+            for (int i = 0; i < Math.min(10, ids.size()); i++) {
+                String id = ids.get(i);
+                int lvl = db.getInt("clans." + id + ".level", 1);
+                int kills = db.getInt("clans." + id + ".kills", 0);
+                p.sendMessage(color(" &#00E5FF#" + (i + 1) + " &8[" + getFormattedTag(id) + "&8] &7— &fУр. &#00FF66" + lvl + " &8| &c" + kills + " убийств"));
+            }
+        }
+        p.sendMessage(color("&#0055ff&l&m                                                "));
+    }
+
+    private void removeMember(String clanId, String playerName) {
+        List<String> members = new ArrayList<>(db.getStringList("clans." + clanId + ".members"));
+        members.removeIf(s -> s.equalsIgnoreCase(playerName));
+        List<String> officers = new ArrayList<>(db.getStringList("clans." + clanId + ".officers"));
+        officers.removeIf(s -> s.equalsIgnoreCase(playerName));
+        db.set("clans." + clanId + ".members", members);
+        db.set("clans." + clanId + ".officers", officers);
+        db.set("players." + playerName.toLowerCase(), null);
+        saveDb();
+    }
+
+    private void upgradeClan(Player p, String clanId) {
+        String prefix = color(getConfig().getString("settings.prefix", "&#0055ff&l⚡ &#00E5FF&lMIR-TIME &8» "));
+        int curLvl = db.getInt("clans." + clanId + ".level", 1);
+        int nextLvl = curLvl + 1;
+        if (!getConfig().contains("levels." + nextLvl)) {
+            p.sendMessage(prefix + color("&#00FF66Ваш клан уже прокачан до максимального уровня!"));
+            return;
+        }
+        double cost = getConfig().getDouble("levels." + nextLvl + ".cost", 50000.0);
+        double bank = db.getDouble("clans." + clanId + ".bank", 0.0);
+        if (bank < cost) { p.sendMessage(msg("not-enough-bank")); return; }
+        db.set("clans." + clanId + ".bank", bank - cost);
+        db.set("clans." + clanId + ".level", nextLvl);
+        saveDb();
+        int newMax = getConfig().getInt("levels." + nextLvl + ".max-members", 15);
+        sendClanMessage(clanId, prefix + "&#00FF66&l[УРОВЕНЬ ПОВЫШЕН!] &fКлан достиг &#00E5FF" + nextLvl + " уровня&f! Лимит бойцов: &#00FF66" + newMax);
+    }
+
+    private void openClanStorage(Player p, String clanId) {
+        String title = getConfig().getString("gui.storage-title", "&#0055ff&l📦 Склад клана &8| %tag%").replace("%tag%", getFormattedTag(clanId));
+        Inventory inv = openStorages.computeIfAbsent(clanId, id -> {
+            Inventory created = Bukkit.createInventory(null, 27, color(title));
+            List<?> saved = db.getList("clans." + id + ".storage");
+            if (saved != null) {
+                for (int i = 0; i < Math.min(27, saved.size()); i++) {
+                    if (saved.get(i) instanceof ItemStack is) created.setItem(i, is);
+                }
+            }
+            return created;
+        });
+        viewingStorageClan.put(p.getUniqueId(), clanId);
+        p.openInventory(inv);
+    }
+
+    @EventHandler
+    public void onStorageClose(InventoryCloseEvent e) {
+        if (!(e.getPlayer() instanceof Player p)) return;
+        String clanId = viewingStorageClan.remove(p.getUniqueId());
+        if (clanId == null) return;
+        Inventory inv = openStorages.get(clanId);
+        if (inv != null) {
+            db.set("clans." + clanId + ".storage", Arrays.asList(inv.getContents()));
+            saveDb();
+        }
+    }
+
     private void openClanMenu(Player p, String clanId) {
         String tag = getFormattedTag(clanId);
         int lvl = db.getInt("clans." + clanId + ".level", 1);
@@ -411,7 +645,6 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
         }
         p.openInventory(inv);
     }
-
     private void openColorsMenu(Player p, String clanId) {
         String title = getConfig().getString("gui.colors-title", "&#0055ff&l⚡ Клан: &#00E5FF&lСтиль и цвет тега");
         Inventory inv = Bukkit.createInventory(null, 45, color(title));
