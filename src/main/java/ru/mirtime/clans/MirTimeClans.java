@@ -181,21 +181,27 @@ public class MirTimeClans extends JavaPlugin implements CommandExecutor, TabComp
         } catch (Exception ignored) {}
     }
 
+    private void registerPlaceholder() {
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            new ClansExpansion(this).register();
+        }
+    }
+
+    public String resolvePlaceholder(String playerName, String id) {
+        String clanId = getPlayerClan(playerName);
+        if (clanId == null) return "";
+        if (id.equals("tag")) {
+            String fmt = getConfig().getString("settings.tag-format", "&8[%tag%&8] ");
+            return color(fmt.replace("%tag%", getFormattedTag(clanId)));
+        }
+        if (id.equals("name")) return color(getFormattedTag(clanId));
+        if (id.equals("level")) return String.valueOf(db.getInt("clans." + clanId + ".level", 1));
+        if (id.equals("kills")) return String.valueOf(db.getInt("clans." + clanId + ".kills", 0));
+        return "";
+    }
+
     private void saveDb() {
         try { db.save(clansFile); } catch (IOException ignored) {}
-    }
-
-    private String getPlayerClan(String playerName) {
-        return db.getString("players." + playerName.toLowerCase());
-    }
-
-    private String getRole(String clanId, String playerName) {
-        String leader = db.getString("clans." + clanId + ".leader", "");
-        if (leader.equalsIgnoreCase(playerName)) return "LEADER";
-        for (String off : db.getStringList("clans." + clanId + ".officers")) {
-            if (off.equalsIgnoreCase(playerName)) return "OFFICER";
-        }
-        return "MEMBER";
     }
 
     private String getRolePrefix(String role) {
